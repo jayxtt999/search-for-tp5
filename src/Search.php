@@ -1,5 +1,5 @@
 <?php
-namespace app\common\search;
+namespace niaoyun\Search;
 
 class Search
 {
