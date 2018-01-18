@@ -1,0 +1,17 @@
+{
+    "name": "niaoyun/search-for-tp5",
+    "description": "search for niaoyun",
+    "authors": [
+        {
+            "name": "Naix",
+            "email": "435024179@qq.com"
+        }
+    ],
+    "license": "Apache-2.0",
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "niaoyun\\Search\\": "src/"
+        }
+    }
+}
