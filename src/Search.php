@@ -234,7 +234,6 @@ class Search
         if ($this->associated) {
             foreach ($this->associated as $k => $ass) {
                 if (isset($param[$k])) {
-
                     if( isset($param[$ass[$k]]) && $param[$ass[$k]]!=''){
                         $leftK         = $param[$k];
                         $rightV        = $param[$ass[$k]];
@@ -242,10 +241,12 @@ class Search
                     }
                     unset($param[$k]);
                     unset($param[$ass[$k]]);
+                }else{
+                    unset($param[$k]);
+                    unset($param[$ass[$k]]);
                 }
             }
         }
-
         //转换别名为真实字段
         if ($this->aliasData) {
             foreach ($param as $key => $item) {
