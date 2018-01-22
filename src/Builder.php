@@ -169,6 +169,7 @@ class Builder {
      * @return string
      */
     function build_form( $echo = true ) {
+
         $output = '';
         if ( $this->form['form_element'] ) {
             $output .= '<form method="' . $this->form['method'] . '"';
@@ -248,7 +249,7 @@ class Builder {
                     $end     .= '>';
                     foreach ( $val['options'] as $key => $opt ) {
                         //key为存数字的情况下，需要将其装换为string,不然 === 的时候匹配不上
-                        if($key === (int)$key){
+                        if($key != '' && $key === (int)$key){
                             $key = (string)$key;
                         }
                         $opt_insert = '';
@@ -282,7 +283,6 @@ class Builder {
                             $key = (string)$key;
                         }
                         $opt_insert = '';
-
                         if (
                             // Is this field set to automatically populate?
                             $val['request_populate'] &&
@@ -295,12 +295,15 @@ class Builder {
                             // Does the field have a default selected value?
                         } else if ( $val['selected'] === $key ) {
                             $opt_insert = ' active';
+                        }else if (!isset( $_REQUEST[ $val['name'] ] ) && $key == '') {
+                            $opt_insert = ' active';
                         }
                         $end .= '<a href="javascript:;" class="ny-select-item '.$opt_insert.'" data-value="'.$key.'">' . $opt . '</a>';
                     }
                     $end .= '</div>';
                     $end .= '</div>';
                     $end .= '</div>';
+
 //                    $end .= '<button class="ny-searchbox-btn" id="searchBtn"></button>';
                     break;
                 case 'button':

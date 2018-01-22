@@ -11,11 +11,13 @@ namespace niaoyun\Search;
 class Search
 {
     protected $fieldConfig = array();
+    protected $field = array();
     protected $associated  = array();
     protected $fieldValue  = array();
     protected $selected    = array();
     protected $aliasData   = array();
     protected $param       = array();
+    protected $markDomParam       = array();
     /**@var $builder Builder* */
     protected $builder;
     const ONLY_KEY   = 'OnlyKey';
@@ -34,6 +36,8 @@ class Search
         return isset($this->aliasData[$field]) ? $this->aliasData[$field] : false;
     }
 
+
+
     /**
      * @author xietaotao
      *
@@ -44,6 +48,17 @@ class Search
         $this->aliasData[$field] = $aliasData;
     }
 
+    /**
+     * @param $name
+     *
+     * @return array
+     * @author xietaotao
+     */
+    public function getFields()
+    {
+        return $this->field;
+
+    }
 
     /**
      * @param $name
@@ -66,6 +81,7 @@ class Search
      */
     public function setFieldConfig($field, $config = [])
     {
+        $this->field[] = $field;
         $this->fieldConfig[$field] = $config;
     }
 
@@ -85,10 +101,26 @@ class Search
             $config['op'] = 'eq';
         }
         $config['__type__'] = self::ONLY_KEY;
-        isset($config['alias']) ? $this->setAliasData($config['alias'], $field) : '';
+
+        if(isset($config['alias'])){
+            $this->setMarkDomParam($config['alias']);
+            $this->setAliasData($config['alias'], $field);
+        }else{
+            $this->setMarkDomParam($field);
+        }
         $this->setFieldConfig($field, $config);
     }
 
+    public function setMarkDomParam($alias){
+
+        $this->markDomParam[$alias] = $alias;
+
+    }
+
+    public function getMarkDomParam(){
+
+        return $this->markDomParam;
+    }
 
     /**
      * 单一类型模式
@@ -105,7 +137,12 @@ class Search
             $config['op'] = 'eq';
         }
         $config['__type__'] = self::ONLY_TYPE;
-        isset($config['alias']) ? $this->setAliasData($config['alias'], $field) : '';
+        if(isset($config['alias'])){
+            $this->setMarkDomParam($config['alias']);
+            $this->setAliasData($config['alias'], $field);
+        }else{
+            $this->setMarkDomParam($field);
+        }
         $this->setFieldConfig($field, $config);
     }
 
@@ -121,6 +158,8 @@ class Search
         $this->setFieldConfig($leftKey, $config);
         $this->setFieldConfig($rightKey, $config);
         $this->setAssociated($leftKey, $rightKey);
+        $this->setMarkDomParam($leftKey);
+        $this->setMarkDomParam($rightKey);
         if (is_array($value) && $value) {
             foreach ($value as $key => $item) {
                 isset($item['alias']) ? $this->setAliasData($item['alias'], $key) : '';
@@ -242,7 +281,7 @@ class Search
 
     }
 
-    private function makeDomOnlyType($field,$fieldConfig, $value)
+    private function makeDomOnlyType($field,$fieldConfig)
     {
         $ext          = isset($fieldConfig['ext']) ? $fieldConfig['ext'] : [];
         $ext['name']  = $fieldConfig['alias'];
@@ -250,18 +289,19 @@ class Search
         $ext['type'] = 'select_new';
         $ext['class'] = 'ny-oa-select';
         $ext['selected'] = true;
+        $defaultOption = [''=>'搜索选项'];
         isset($ext['options'])?'':$ext['options']=[];
+        $ext['options'] = array_merge($defaultOption,$ext['options']);
         $this->builder->add_input($label, $ext,$fieldConfig['alias']);
 
     }
 
 
-    private function makeDomOnlyKey($field,$fieldConfig, $value)
+    private function makeDomOnlyKey($field,$fieldConfig)
     {
 
         $ext          = isset($fieldConfig['ext']) ? $fieldConfig['ext'] : [];
         $ext['name']  = $fieldConfig['alias'];
-        $ext['value'] = $value;
         $ext['class'] = 'ny-input';
         $label        = isset($ext['label']) ? $ext['label']  : $fieldConfig['add_label'] = false;
         $this->builder->add_input($label, $ext,$fieldConfig['alias']);
@@ -269,7 +309,7 @@ class Search
     }
 
 
-    private function makeDomAssocType($field,$fieldConfig, $value){
+    private function makeDomAssocType($field,$fieldConfig){
 
         $associatedV = $this->getAssociated($field);
         if(!$associatedV){
@@ -280,18 +320,19 @@ class Search
         $options = isset($ext['options'])?$ext['options']:[];
         if($options){
             $newOptions = [];
+            $newOptions[''] = '搜索选项';
             foreach($options as $k=>$v){
                 $newOptions[$v['alias']] = $v['name'];
             }
             $ext['options'] = $newOptions;
         }
+
         $ext['class']  = 'ny-serach-box margin-left-30 pull-left clearfix';
         $ext['name']  = $field;
         $ext['type'] = 'select_new';
         $ext['selected'] = true;
         $ext['add_label'] = false;
         $this->builder->add_input($label, $ext,$field);
-
         $extWord['name'] = $associatedV[$field];
         $extWord['type'] = 'text';
         $extWord['class'] = 'ny-input';
@@ -312,6 +353,8 @@ class Search
             'add_submit'=>false,
         ];
         $this->builder = new Builder($action, $args);
+        $markDomParam = $this->getMarkDomParam();
+        $this->param = array_merge($markDomParam,$this->param);
         foreach ($this->param as $key => $value) {
             //根据别名获取真实字段
             $field = $this->getAliasData($key);
@@ -323,7 +366,7 @@ class Search
             //根据类型生成DOM
             $type = $fieldConfig['__type__'];
             $func = 'makeDom' . $type;
-            call_user_func(array($this, $func), $field,$fieldConfig, $value);
+            call_user_func(array($this, $func), $field,$fieldConfig);
         }
 
         $submitBtn = [
@@ -332,7 +375,6 @@ class Search
             'id'=>'searchBtn',
         ];
         $this->builder->add_input('',$submitBtn);
-
         $html = $this->builder->build_form(false);
         return $html;
     }
