@@ -10,19 +10,17 @@ namespace niaoyun\Search;
 
 class Search
 {
-    protected $fieldConfig = array();
-    protected $field = array();
-    protected $associated  = array();
-    protected $fieldValue  = array();
-    protected $selected    = array();
-    protected $aliasData   = array();
-    protected $param       = array();
-    protected $markDomParam       = array();
+    protected $fieldConfig      = array();
+    protected $field            = array();
+    protected $associated       = array();
+    protected $fieldValue       = array();
+    protected $selected         = array();
+    protected $aliasData        = array();
+    protected $param            = array();
+    protected $timeSectionField = array();
+    protected $markDomParam     = array();
     /**@var $builder Builder* */
     protected $builder;
-    const ONLY_KEY   = 'OnlyKey';
-    const ONLY_TYPE  = 'OnlyType';
-    const ASSOC_TYPE = 'AssocType';
 
     //验证表达式，copy think\db\Builder exp ,避免sql级别错误
     protected $exp = ['eq' => '=', 'neq' => '<>', 'gt' => '>', 'egt' => '>=', 'lt' => '<', 'elt' => '<=', 'notlike' => 'NOT LIKE', 'not like' => 'NOT LIKE', 'like' => 'LIKE', 'in' => 'IN', 'exp' => 'EXP', 'notin' => 'NOT IN', 'not in' => 'NOT IN', 'between' => 'BETWEEN', 'not between' => 'NOT BETWEEN', 'notbetween' => 'NOT BETWEEN', 'exists' => 'EXISTS', 'notexists' => 'NOT EXISTS', 'not exists' => 'NOT EXISTS', 'null' => 'NULL', 'notnull' => 'NOT NULL', 'not null' => 'NOT NULL', '> time' => '> TIME', '< time' => '< TIME', '>= time' => '>= TIME', '<= time' => '<= TIME', 'between time' => 'BETWEEN TIME', 'not between time' => 'NOT BETWEEN TIME', 'notbetween time' => 'NOT BETWEEN TIME'];
@@ -37,15 +35,25 @@ class Search
     }
 
 
+    /**
+     * @author xietaotao
+     *
+     * @param array $aliasData
+     */
+    public function setAliasData($field, $alias)
+    {
+        $this->aliasData[$alias] = $field;
+    }
+
 
     /**
      * @author xietaotao
      *
      * @param array $aliasData
      */
-    public function setAliasData($field, $aliasData)
+    public function setTimeSectionField($field)
     {
-        $this->aliasData[$field] = $aliasData;
+        $this->timeSectionField[] = $field;
     }
 
     /**
@@ -72,6 +80,23 @@ class Search
 
     }
 
+    public function setMarkDomParam($alias, $config = [])
+    {
+
+        $this->markDomParam[$alias] = $config;
+    }
+
+    public function getMarkDomParam($alias)
+    {
+
+        return $this->markDomParam[$alias];
+    }
+
+    public function getMarkDomParams()
+    {
+
+        return $this->markDomParam;
+    }
 
     /**
      * @param $name
@@ -81,7 +106,7 @@ class Search
      */
     public function setFieldConfig($field, $config = [])
     {
-        $this->field[] = $field;
+        $this->field[]             = $field;
         $this->fieldConfig[$field] = $config;
     }
 
@@ -100,27 +125,55 @@ class Search
         if (!isset($config['op'])) {
             $config['op'] = 'eq';
         }
-        $config['__type__'] = self::ONLY_KEY;
-
-        if(isset($config['alias'])){
-            $this->setMarkDomParam($config['alias']);
-            $this->setAliasData($config['alias'], $field);
-        }else{
-            $this->setMarkDomParam($field);
+        $ext = [
+            'type' => 'text',
+        ];
+        if (isset($config['ext'])) {
+            $ext = array_merge($config['ext'], $ext);
+        }
+        if (isset($config['alias'])) {
+            $this->setMarkDomParam($config['alias'], $ext);
+            $this->setAliasData($field, $config['alias']);
+        } else {
+            $this->setMarkDomParam($field, $ext);
         }
         $this->setFieldConfig($field, $config);
     }
 
-    public function setMarkDomParam($alias){
 
-        $this->markDomParam[$alias] = $alias;
+    /**
+     * 时间搜索模式
+     *
+     * @param $field
+     * @param $config
+     *
+     * @author xietaotao
+     */
+    public function setTime($field, $config = [])
+    {
 
+        $config['op']    = 'between time';
+        $config['alias'] = isset($config['alias']) ? $config['alias'] : ['start_time', 'end_time'];
+        $ext             = isset($config['ext']) ? $config['ext'] : [];
+        $defaultExt      = [
+            'name_from' => 'start_time',
+            'name_to'   => 'end_time',
+            'id_from'   => 'startDate',
+            'id_to'     => 'endDate',
+            'format'    => '',
+        ];
+        $ext             = array_merge($defaultExt, $ext);
+        $ext['type']     = 'nytime';
+        if (isset($config['alias']) && is_array($config['alias'])) {
+            foreach ($config['alias'] as $alias) {
+                $this->setAliasData($field, $alias);
+            }
+        }
+        $this->setMarkDomParam($field, $ext);
+        $this->setTimeSectionField($field);
+        $this->setFieldConfig($field, $config);
     }
 
-    public function getMarkDomParam(){
-
-        return $this->markDomParam;
-    }
 
     /**
      * 单一类型模式
@@ -136,12 +189,17 @@ class Search
         if (!isset($config['op'])) {
             $config['op'] = 'eq';
         }
-        $config['__type__'] = self::ONLY_TYPE;
-        if(isset($config['alias'])){
-            $this->setMarkDomParam($config['alias']);
-            $this->setAliasData($config['alias'], $field);
-        }else{
-            $this->setMarkDomParam($field);
+        $ext = [
+            'type' => 'nyselect',
+        ];
+        if (isset($config['ext'])) {
+            $ext = array_merge($config['ext'], $ext);
+        }
+        if (isset($config['alias'])) {
+            $this->setMarkDomParam($config['alias'], $ext);
+            $this->setAliasData($field, $config['alias']);
+        } else {
+            $this->setMarkDomParam($field, $ext);
         }
         $this->setFieldConfig($field, $config);
     }
@@ -149,24 +207,26 @@ class Search
 
     public function setAssocType($leftKey, $rightKey, $config = [])
     {
-
-        $value = isset($config['ext']['options']) ? $config['ext']['options'] : [];
+        $ext          = isset($config['ext']) ? $config['ext'] : [];
+        $ext['type']  = 'nyselectunion';
+        $ext['assoc'] = $rightKey;
+        $value        = isset($ext['options']) ? $ext['options'] : [];
         $this->setAliasData($leftKey, $leftKey);
         $this->setAliasData($rightKey, $rightKey);
         $this->setfieldValue($leftKey, $value);
-        $config['__type__'] = self::ASSOC_TYPE;
         $this->setFieldConfig($leftKey, $config);
         $this->setFieldConfig($rightKey, $config);
         $this->setAssociated($leftKey, $rightKey);
-        $this->setMarkDomParam($leftKey);
-        $this->setMarkDomParam($rightKey);
-        if (is_array($value) && $value) {
-            foreach ($value as $key => $item) {
-                isset($item['alias']) ? $this->setAliasData($item['alias'], $key) : '';
-                //将配置复制到所以子字段
-                $this->setFieldConfig($key, $config);
+        $this->setMarkDomParam($leftKey, $ext);
+
+        if (isset($config['alias']) && is_array($config['alias'])) {
+            foreach ($config['alias'] as $field => $alias) {
+                $this->setAliasData($field, $alias);
+                $this->setFieldConfig($field, $config);
             }
         }
+
+
     }
 
 
@@ -178,7 +238,7 @@ class Search
      */
     public function getAssociated($name)
     {
-        return isset($this->associated[$name])?$this->associated[$name]:false;
+        return isset($this->associated[$name]) ? $this->associated[$name] : false;
     }
 
     /**
@@ -211,10 +271,9 @@ class Search
     }
 
 
-    public function getWhere($param = '')
+    public function getWhere($param)
     {
         $whereMap    = [];
-        $param       = $param ? $param : input('param.', '');
         $this->param = $param;
         if (!$param) {
             return $whereMap;
@@ -231,29 +290,39 @@ class Search
             $param[$k2] = htmlspecialchars($v, ENT_QUOTES);
         }
         //优先处理存在关联的key
+
         if ($this->associated) {
+
             foreach ($this->associated as $k => $ass) {
                 if (isset($param[$k])) {
-                    if( isset($param[$ass[$k]]) && $param[$ass[$k]]!=''){
+                    if (isset($param[$ass[$k]]) && $param[$ass[$k]] != '') {
                         $leftK         = $param[$k];
                         $rightV        = $param[$ass[$k]];
                         $param[$leftK] = $rightV;
                     }
                     unset($param[$k]);
                     unset($param[$ass[$k]]);
-                }else{
+                } else {
                     unset($param[$k]);
                     unset($param[$ass[$k]]);
                 }
             }
         }
+
         //转换别名为真实字段
         if ($this->aliasData) {
             foreach ($param as $key => $item) {
-                if (array_key_exists($key, $this->aliasData)) {
+                if (isset($this->aliasData[$key])) {
                     if ($key != $this->aliasData[$key]) {
-                        $param[$this->aliasData[$key]] = $item;
-                        unset($param[$key]);
+
+                        $newK = $this->aliasData[$key];
+                        if (in_array($newK, $this->timeSectionField)) {
+                            $param[$newK][] = $item;
+                            unset($param[$key]);
+                        } else {
+                            $param[$newK] = $item;
+                            unset($param[$key]);
+                        }
                     }
                 } else {
                     unset($param[$key]);
@@ -274,110 +343,27 @@ class Search
                     break;
                 case 'between time':
                 case 'not between time':
-                    $item = explode(' - ', $item);
+                    break;
             }
             $maps[$key] = [$op, $item];
         }
+
         return $maps;
 
     }
 
-    private function makeDomOnlyType($field,$fieldConfig)
-    {
-        $ext          = isset($fieldConfig['ext']) ? $fieldConfig['ext'] : [];
-        $ext['name']  = $fieldConfig['alias'];
-        $label       = isset($ext['label']) ? $ext['label'] : $fieldConfig['add_label'] = false;
-        $ext['type'] = 'select_new';
-        $ext['class'] = 'ny-oa-select';
-        $ext['selected'] = true;
-        $defaultOption = [''=>'搜索选项'];
-        isset($ext['options'])?'':$ext['options']=[];
-        $ext['options'] = array_merge($defaultOption,$ext['options']);
-        $this->builder->add_input($label, $ext,$fieldConfig['alias']);
 
-    }
-
-
-    private function makeDomOnlyKey($field,$fieldConfig)
+    public function makeDom($action, $data = [], $method = 'get')
     {
 
-        $ext          = isset($fieldConfig['ext']) ? $fieldConfig['ext'] : [];
-        $ext['name']  = $fieldConfig['alias'];
-        $ext['class'] = 'ny-input';
-        $label        = isset($ext['label']) ? $ext['label']  : $fieldConfig['add_label'] = false;
-        $this->builder->add_input($label, $ext,$fieldConfig['alias']);
+        $builder      = new Builder($action, $method);
+        $markDomParam = $this->getMarkDomParams();
+        $builder->addFormItems($markDomParam);
+        $builder->addNyButton('searchBtn', []);
+        $builder->setFormData($data);
 
-    }
+        return $builder->getVars();
 
-
-    private function makeDomAssocType($field,$fieldConfig){
-
-        $associatedV = $this->getAssociated($field);
-        if(!$associatedV){
-            return;
-        }
-        $ext          = isset($fieldConfig['ext']) ? $fieldConfig['ext'] : [];
-        $label       = isset($ext['label']) ? $ext['label'] : '';
-        $options = isset($ext['options'])?$ext['options']:[];
-        if($options){
-            $newOptions = [];
-            $newOptions[''] = '搜索选项';
-            foreach($options as $k=>$v){
-                $newOptions[$v['alias']] = $v['name'];
-            }
-            $ext['options'] = $newOptions;
-        }
-
-        $ext['class']  = 'ny-serach-box margin-left-30 pull-left clearfix';
-        $ext['name']  = $field;
-        $ext['type'] = 'select_new';
-        $ext['selected'] = true;
-        $ext['add_label'] = false;
-        $this->builder->add_input($label, $ext,$field);
-        $extWord['name'] = $associatedV[$field];
-        $extWord['type'] = 'text';
-        $extWord['class'] = 'ny-input';
-        $extWord['placeholder'] = '搜索...';
-        $extWord['add_label'] = false;
-        $this->builder->add_input($label, $extWord,$associatedV[$field]);
-
-    }
-
-
-    public function makeDom($action)
-    {
-
-        //强制转换为get提交
-        $args          = [
-            'method' => 'get',
-            'add_honeypot'=>false,
-            'add_submit'=>false,
-        ];
-        $this->builder = new Builder($action, $args);
-        $markDomParam = $this->getMarkDomParam();
-        $this->param = array_merge($markDomParam,$this->param);
-        foreach ($this->param as $key => $value) {
-            //根据别名获取真实字段
-            $field = $this->getAliasData($key);
-            if (!$field) {
-                continue;
-            }
-            //获取字段配置
-            $fieldConfig = $this->getFieldConfig($field);
-            //根据类型生成DOM
-            $type = $fieldConfig['__type__'];
-            $func = 'makeDom' . $type;
-            call_user_func(array($this, $func), $field,$fieldConfig);
-        }
-
-        $submitBtn = [
-            'type'=>'button',
-            'class'=>'ny-searchbox-btn',
-            'id'=>'searchBtn',
-        ];
-        $this->builder->add_input('',$submitBtn);
-        $html = $this->builder->build_form(false);
-        return $html;
     }
 
 
