@@ -1,0 +1,81 @@
+
+<!-- 搜索框最外层 -->
+<div class="ly-serach-box pull-left clearfix">
+	<form action="{$search['post_url']|default=''}" method="{$search['_method']}">
+
+
+		<volist name="$search['form_items']" id="form">
+			<switch name="form.type">
+
+				<case value="text">
+
+					<div class="search-item">
+						<input class="ly-input" type="text" id="{$form.id}" name="{$form.name}" value="{$form.value|default=''}" placeholder="{$form.placeholder}" {$form.extra_attr|default=''}>
+					</div>
+				</case>
+
+
+				<case value="type">
+					<div class="search-item">
+						<!-- 下拉选择 -->
+						<div class="ly-select-box not-check-first">
+							<a href="javascript:;" class="ly-select-show" data-value="">搜索选项</a>
+							<input class="ly-select-value-input" type="hidden" name="{$form['name']}" value="{$form['value']}" />
+							<div class="ly-select-list hide">
+								<volist name="form['options']" id="option">
+									<a href="javascript:;" class="ly-select-item <if ((string)$form['value'] == (string)$key)>active</if>" data-value="{$key}">{$option}</a>
+								</volist>
+							</div>
+						</div>
+					</div>
+
+				</case>
+
+				<case value="assoc">
+					<div class="search-item">
+						<!-- 下拉选择 -->
+						<div class="ly-select-box not-check-first">
+							<a href="javascript:;" class="ly-select-show " data-value="">搜索选项</a>
+							<input class="ly-select-value-input" type="hidden" name="{$form['name']}" value="{$form['value']}" />
+							<div class="ly-select-list hide">
+								<volist name="form['options']" id="option">
+									<a href="javascript:;" class="ly-select-item <if ((string)$form['value'] == (string)$key)>active</if>" data-value="{$key}">{$option}</a>
+								</volist>
+							</div>
+						</div>
+					</div>
+					<div class="search-item">
+							<input id="searchInput" type="text" class="ly-input" placeholder="关键字" name="{$form['assoc']}" value="{$form['assoc_value']}">
+					</div>
+				</case>
+
+
+				<case value="timebetween">
+
+					<div class="search-item">
+						<div class="search-box-date">
+
+							<input class="ly-input" type="text" id="startDate" name="{$form.name_from}" value="{$form.value_from|default=''}" placeholder="{$form.placeholder|default='开始日期'.$form[type].title}" {$form.extra_attr|default=''}>
+							至
+							<input class="ly-input" type="text" id="endDate" name="{$form.name_to}" value="{$form.value_to|default=''}" placeholder="{$form.placeholder|default='结束日期'.$form[type].title}" {$form.extra_attr|default=''}>
+
+						</div>
+					</div>
+
+				</case>
+
+				<case value="button">
+					<div class="search-item">
+						<button class="ly-searchbox-btn" id="searchBtn"></button>
+					</div>
+				</case>
+
+			</switch>
+
+
+		</volist>
+
+
+	</form>
+
+</div>

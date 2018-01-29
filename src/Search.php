@@ -200,18 +200,21 @@ class Search
 
     }
 
+
     /**
      * 获取where语句
+     * @param array $additionWhere 附加的where,应用于比如存在status的搜索但默认不能为-1这种情况
+     *
      * @return array
      * @author xietaotao
      */
-    public function getWhere()
+    public function getWhere($additionWhere=[])
     {
 
-        $where = [];
         if (!$this->param) {
-            return $where;
+            return $additionWhere;
         }
+        $where = [];
         if ($this->searchConfig) {
             foreach ($this->searchConfig as $config) {
 
@@ -277,7 +280,7 @@ class Search
                 $where[$field] = $this->reOpVal($fieldConfig['op'], $this->param[$v]);
             }
         }
-
+        $where = array_merge($additionWhere,$where);
         return $where;
     }
 
